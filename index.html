@@ -967,7 +967,7 @@
 <div class="form-intro">
 <div class="overline">NEXTWOOD BLACK FRIDAY · CONSULTATION</div>
 <h3>블랙프라이데이 특가 상담 신청</h3>
-<p>아래 항목을 입력하시면 담당자에게 상담 요청 메일을 작성할 수 있습니다.</p>
+<p>아래 항목을 입력하시면 NEXTWOOD 담당자에게 상담 신청이 접수됩니다.</p>
 </div>
 <div class="field-grid">
 <div class="field">
@@ -1048,7 +1048,7 @@
 <button class="btn primary" type="submit">블랙프라이데이 특가 상담 신청</button>
 <a class="btn secondary" href="mailto:hyj@ycgroup.co.kr">이메일 직접 문의</a>
 </div>
-<p class="form-help">현재 폼은 실제 백엔드 저장 기능이 연결되지 않았으며, 입력 내용을 바탕으로 메일 초안을 생성합니다. 폼 서비스 또는 CRM 연동 시 action/API 연결만 추가하면 됩니다.</p>
+<p class="form-help">신청하신 상담 정보는 담당자 확인을 위해 monday.com 상담 보드에 등록됩니다. 접수 완료 안내가 표시될 때까지 페이지를 닫지 마세요.</p>
 </form>
 </div>
 </div>
@@ -1177,8 +1177,13 @@
         });
       });
 
-      form.addEventListener('submit', (e) => {
+      const CONSULT_API = 'https://nextwood-monday-consult.ycgroup-cwsong.workers.dev/api/consult';
+      const submitButton = form.querySelector('button[type="submit"]');
+      const originalSubmitText = submitButton.textContent;
+
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (submitButton.disabled) return;
 
         const name = document.getElementById('name').value.trim();
         const phone = document.getElementById('phone').value.trim();
@@ -1190,33 +1195,34 @@
         const agree = document.getElementById('agree').checked;
         const model = (modelRadios.find(radio => radio.checked) || {}).value || '상담 후 결정';
 
-        if (!name || !phone || !timeline || !purpose || !agree || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
-          feedback.textContent = '이름, 연락처, 도입 희망 시기, 주요 사용 목적, 구매 희망 대수(1~99대)를 확인하고 개인정보 동의에 체크해 주세요.';
-          feedback.classList.add('show');
+        feedback.classList.add('show');
+        if (!name || !/^\d{9,15}$/.test(phone.replace(/\D/g, '')) ||
+            !timeline || !purpose || !agree || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+          feedback.textContent = '이름, 연락처, 도입 희망 시기, 주요 사용 목적, 구매 희망 대수(1~99대)와 개인정보 동의를 확인해 주세요.';
           return;
         }
 
-        const subject = `[NEXTWOOD 블랙프라이데이 2026] ${model} 특가 상담 신청`;
-        const body = [
-          '안녕하세요. NEXTWOOD 블랙프라이데이 특가 상담을 신청합니다.',
-          '',
-          `이름: ${name}`,
-          `연락처: ${phone}`,
-          `업체명: ${company || '미입력'}`,
-          `구매 희망 대수: ${quantity}대`,
-          `관심 모델: ${model}`,
-          `주요 사용 목적: ${purpose}`,
-          `도입 희망 시기: ${timeline}`,
-          `문의 내용: ${message || '미입력'}`,
-          '',
-          '확인 후 연락 부탁드립니다.',
-          '감사합니다.'
-        ].join('\n');
-
-        feedback.textContent = '현재 폼은 실제 서버 저장 기능이 연결되지 않아, 입력 내용을 담은 메일 초안을 엽니다. 메일 앱이 열리지 않으면 hyj@ycgroup.co.kr로 직접 보내 주세요.';
-        feedback.classList.add('show');
-
-        window.location.href = `mailto:hyj@ycgroup.co.kr?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        submitButton.disabled = true;
+        submitButton.textContent = '상담 신청 접수 중...';
+        feedback.textContent = '상담 신청을 전송하고 있습니다.';
+        try {
+          const response = await fetch(CONSULT_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, phone, company, quantity, timeline, purpose, message, agree, model, website_url: '' }),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data.ok !== true || !data.itemId) {
+            throw new Error(data.message || '서버에서 접수를 확인하지 못했습니다.');
+          }
+          feedback.textContent = `상담 신청이 접수되었습니다. 접수번호: ${data.itemId}. 담당자가 확인 후 연락드리겠습니다.`;
+          form.reset();
+        } catch (error) {
+          feedback.textContent = `접수되지 않았습니다. ${error.message || '네트워크 연결을 확인하고 다시 시도해 주세요.'} 필요하면 이메일 직접 문의를 이용해 주세요.`;
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = originalSubmitText;
+        }
       });
     })();
   </script>
