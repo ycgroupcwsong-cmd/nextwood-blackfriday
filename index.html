@@ -609,6 +609,20 @@
  #media .media-card .media-top{padding:16px 16px 10px}
  #media .media-live .media-caption{padding:10px 16px 14px;min-height:0}
 }
+
+    /* 상담 폼 선택 목록: 운영체제 기본 메뉴의 흰 배경/흰 글씨 충돌 방지 */
+    #consultForm .field select { color: #f5f7f5; color-scheme: dark; }
+    #consultForm .field select option { background-color: #ffffff; color: #111111; }
+    /* Chrome/Edge/Safari 등 네이티브 메뉴의 밝은 팝업에 대응 */
+    @supports (color-scheme: light) {
+      #consultForm .field select { color-scheme: light; background-color: #202622; color: #f5f7f5; }
+      #consultForm .field select option { background-color: #ffffff; color: #111111; }
+    }
+    #consultForm .form-intro { margin: 0 0 10px; padding: 0 0 24px; border-bottom: 1px solid rgba(255,255,255,.12); }
+    #consultForm .form-intro .overline { color: #4FD6A0; font: 800 12px 'Inter','Noto Sans KR',sans-serif; letter-spacing: .12em; }
+    #consultForm .form-intro h3 { margin: 10px 0 8px; color: #fff; font-size: clamp(24px, 2.4vw, 30px); line-height: 1.3; letter-spacing: -.04em; }
+    #consultForm .form-intro p { margin: 0; color: #ADB8B0; font-size: 13px; line-height: 1.75; }
+
 </style>
 </head>
 <body>
@@ -950,6 +964,11 @@
 </div>
 <div class="form-card" data-delay="1" data-reveal="">
 <form id="consultForm" novalidate="">
+<div class="form-intro">
+<div class="overline">NEXTWOOD BLACK FRIDAY · CONSULTATION</div>
+<h3>블랙프라이데이 특가 상담 신청</h3>
+<p>아래 항목을 입력하시면 담당자에게 상담 요청 메일을 작성할 수 있습니다.</p>
+</div>
 <div class="field-grid">
 <div class="field">
 <label for="name">이름</label>
@@ -976,6 +995,10 @@
 <option>상담 후 결정</option>
 </select>
 </div>
+</div>
+<div class="field">
+<label for="quantity">구매 희망 대수</label>
+<input id="quantity" inputmode="numeric" max="99" min="1" name="quantity" required="" step="1" type="number" value="1"/>
 </div>
 <div class="field">
 <label>관심 모델</label>
@@ -1160,14 +1183,15 @@
         const name = document.getElementById('name').value.trim();
         const phone = document.getElementById('phone').value.trim();
         const company = document.getElementById('company').value.trim();
+        const quantity = Number(document.getElementById('quantity').value);
         const timeline = document.getElementById('timeline').value;
         const purpose = document.getElementById('purpose').value;
         const message = document.getElementById('message').value.trim();
         const agree = document.getElementById('agree').checked;
         const model = (modelRadios.find(radio => radio.checked) || {}).value || '상담 후 결정';
 
-        if (!name || !phone || !timeline || !purpose || !agree) {
-          feedback.textContent = '이름, 연락처, 도입 희망 시기, 주요 사용 목적을 입력하고 개인정보 동의에 체크해 주세요.';
+        if (!name || !phone || !timeline || !purpose || !agree || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+          feedback.textContent = '이름, 연락처, 도입 희망 시기, 주요 사용 목적, 구매 희망 대수(1~99대)를 확인하고 개인정보 동의에 체크해 주세요.';
           feedback.classList.add('show');
           return;
         }
@@ -1179,6 +1203,7 @@
           `이름: ${name}`,
           `연락처: ${phone}`,
           `업체명: ${company || '미입력'}`,
+          `구매 희망 대수: ${quantity}대`,
           `관심 모델: ${model}`,
           `주요 사용 목적: ${purpose}`,
           `도입 희망 시기: ${timeline}`,
