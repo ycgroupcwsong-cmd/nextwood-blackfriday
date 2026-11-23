@@ -985,8 +985,8 @@
 <input id="company" name="company" placeholder="업체명 입력" type="text"/>
 </div>
 <div class="field">
-<label for="timeline">도입 희망 시기</label>
-<select id="timeline" name="timeline" required="">
+<label for="timeline">도입 희망 시기 <small>(선택)</small></label>
+<select id="timeline" name="timeline">
 <option value="">선택해 주세요</option>
 <option>즉시 검토 중</option>
 <option>1개월 이내</option>
@@ -997,8 +997,8 @@
 </div>
 </div>
 <div class="field">
-<label for="quantity">구매 희망 대수</label>
-<input id="quantity" inputmode="numeric" max="99" min="1" name="quantity" required="" step="1" type="number" value="1"/>
+<label for="quantity">구매 희망 대수 <small>(선택)</small></label>
+<input id="quantity" inputmode="numeric" max="99" min="1" name="quantity" step="1" type="number" value="1"/>
 </div>
 <div class="field">
 <label>관심 모델</label>
@@ -1019,8 +1019,8 @@
 </div>
 <div class="field-grid">
 <div class="field">
-<label for="purpose">주요 사용 목적</label>
-<select id="purpose" name="purpose" required="">
+<label for="purpose">주요 사용 목적 <small>(선택)</small></label>
+<select id="purpose" name="purpose">
 <option value="">선택해 주세요</option>
 <option>목공 공방 작업</option>
 <option>가구 제조</option>
@@ -1188,17 +1188,19 @@
         const name = document.getElementById('name').value.trim();
         const phone = document.getElementById('phone').value.trim();
         const company = document.getElementById('company').value.trim();
-        const quantity = Number(document.getElementById('quantity').value);
-        const timeline = document.getElementById('timeline').value;
-        const purpose = document.getElementById('purpose').value;
+        const quantityRaw = Number(document.getElementById('quantity').value);
+        // 선택 항목: 비워 두면 서버 검증을 통과하도록 기본값으로 보냄
+        const quantity = Number.isInteger(quantityRaw) && quantityRaw >= 1 && quantityRaw <= 99 ? quantityRaw : 1;
+        const timeline = document.getElementById('timeline').value || '상담 후 결정';
+        const purpose = document.getElementById('purpose').value || '기타';
         const message = document.getElementById('message').value.trim();
         const agree = document.getElementById('agree').checked;
         const model = (modelRadios.find(radio => radio.checked) || {}).value || '상담 후 결정';
 
         feedback.classList.add('show');
         if (!name || !/^\d{9,15}$/.test(phone.replace(/\D/g, '')) ||
-            !timeline || !purpose || !agree || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
-          feedback.textContent = '이름, 연락처, 도입 희망 시기, 주요 사용 목적, 구매 희망 대수(1~99대)와 개인정보 동의를 확인해 주세요.';
+            !agree) {
+          feedback.textContent = '이름, 연락처와 개인정보 동의를 확인해 주세요.';
           return;
         }
 
@@ -1206,10 +1208,16 @@
         submitButton.textContent = '상담 신청 접수 중...';
         feedback.textContent = '상담 신청을 전송하고 있습니다.';
         try {
+          // 광고 유입 추적: 주소의 utm 값을 함께 전송(서버가 모르는 항목은 무시)
+          const qs = new URLSearchParams(location.search);
+          const utm_source = qs.get('utm_source') || '';
+          const utm_medium = qs.get('utm_medium') || '';
+          const utm_campaign = qs.get('utm_campaign') || '';
+          const utm_content = qs.get('utm_content') || '';
           const response = await fetch(CONSULT_API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, phone, company, quantity, timeline, purpose, message, agree, model, website_url: '' }),
+            body: JSON.stringify({ name, phone, company, quantity, timeline, purpose, message, agree, model, website_url: '', utm_source, utm_medium, utm_campaign, utm_content }),
           });
           const data = await response.json().catch(() => ({}));
           if (!response.ok || data.ok !== true || !data.itemId) {
